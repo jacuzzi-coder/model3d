@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta charset="UTF-8">
+<title>WoodTerm — Konfigurator Balii</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body { background: #1a1a1a; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; width: 100vw; }
+  #canvas-wrap { flex: 1; position: relative; }
+  canvas { width: 100% !important; height: 100% !important; display: block; }
+  #panel {
+    width: 320px; background: #111; color: #eee;
+    padding: 20px 18px; display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto; font-size: 13px;
+  }
+  #panel h1 { font-size: 17px; font-weight: 300; letter-spacing: 2px; color: #fff; }
+  #panel h1 span { color: #c8a96e; font-weight: 600; }
+
+  .section { border-top: 1px solid #2a2a2a; padding-top: 12px; }
+  .section h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #c8a96e; margin-bottom: 8px; font-weight: 600; }
+
+  .ctrl { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .ctrl label { color: #ccc; flex: 1; }
+  .ctrl .price { color: #c8a96e; font-size: 11px; margin-right: 8px; white-space: nowrap; }
+  input[type=color] { width: 36px; height: 26px; border: none; border-radius: 3px; cursor: pointer; background: none; padding: 0; }
+  input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; accent-color: #c8a96e; flex-shrink: 0; }
+
+  .swatch-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+  .swatch { width: 26px; height: 26px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; transition: border-color .2s; position: relative; }
+  .swatch:hover, .swatch.active { border-color: #c8a96e; }
+  .swatch[title]:hover::after { content: attr(title); position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; white-space: nowrap; z-index: 10; pointer-events: none; }
+
+  .wood-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px; }
+  .wood-group-label {
+    color: #888; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 8px 0 4px; border-top: 1px solid #333; margin-top: 4px;
+  }
+  .wood-group-label:first-child { border-top: none; margin-top: 0; }
+  .wood-item {
+    display: flex; align-items: center; gap: 8px; padding: 5px 4px;
+    cursor: pointer; border-radius: 4px; transition: background .15s;
+  }
+  .wood-item:hover { background: #2a2a2a; }
+  .wood-item.active { background: #2a1a00; outline: 1px solid #c8a96e; }
+  .wood-item img { width: 50px; height: 35px; object-fit: cover; border-radius: 3px; flex-shrink:0; }
+  .wood-item-name { color: #ddd; font-size: 12px; }
+  .wood-item-price { color: #c8a96e; font-size: 10px; margin-top:1px; }
+
+  .marble-btn-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .marble-btn { padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; border: 2px solid #333; background: #1a1a1a; color: #aaa; transition: all .2s; }
+  .marble-btn:hover { border-color: #c8a96e; color: #fff; }
+  .marble-btn.active { border-color: #c8a96e; color: #c8a96e; background: #1f1a10; }
+
+  .toggle-row { display: flex; gap: 6px; margin-top: 5px; }
+  .toggle-btn { flex: 1; padding: 5px 3px; border-radius: 3px; cursor: pointer; font-size: 11px; border: 2px solid #333; background: #1a1a1a; color: #aaa; text-align: center; transition: all .2s; }
+  .toggle-btn.active { border-color: #c8a96e; color: #c8a96e; background: #1f1a10; }
+
+  .led-swatch-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+  .led-swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color .2s; }
+  .led-swatch:hover, .led-swatch.active { border-color: #fff; }
+
+  /* KALKULATOR */
+  #kalkulator {
+    background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 6px;
+    padding: 12px; margin-top: 4px;
+  }
+  #kalkulator h3 { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #666; margin-bottom: 10px; }
+  .kal-row { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-bottom: 4px; }
+  .kal-row.active { color: #ccc; }
+  .kal-divider { border: none; border-top: 1px solid #2a2a2a; margin: 8px 0; }
+  .kal-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; color: #c8a96e; margin-top: 4px; }
+  .kal-note { font-size: 10px; color: #444; margin-top: 6px; line-height: 1.4; }
+
+  #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #888; font-size: 14px; letter-spacing: 1px; }
+
+  /* ── MOBILE ─────────────────────────────────────── */
+  @media (max-width: 768px) {
+    body {
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+      overflow: auto;
+      width: 100%;
+    }
+    html { overflow: auto; }
+    #canvas-wrap {
+      width: 100%;
+      height: 55vw;
+      min-height: 280px;
+      max-height: 420px;
+      flex: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    #panel {
+      width: 100%;
+      max-height: none;
+      overflow-y: visible;
+      padding: 14px 12px;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .toggle-btn {
+      padding: 12px 10px;
+      font-size: 13px;
+    }
+    .ctrl { gap: 8px; }
+    .wood-item img { width: 50px; height: 50px; }
+    .niecka-item img { width: 50px; height: 50px; }
+    #kalkulator { font-size: 13px; }
+    .led-swatch { width: 32px; height: 32px; }
+    input[type="range"] { height: 20px; }
+    h3 { font-size: 12px; }
+  }
+
+  @media (max-width: 480px) {
+    #canvas-wrap {
+      height: 65vw;
+      min-height: 240px;
+    }
+    #panel { padding: 10px; }
+    .toggle-row { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<div id="canvas-wrap">
+  <div id="loading">Ładowanie modelu…</div>
+  <canvas id="c"></canvas>
+</div>
+<div id="panel">
+  <h1>WOOD<span>TERM</span></h1>
+
+  <!-- PIEC -->
+  <div class="section">
+    <h3>Podgrzewanie wody</h3>
+    <div class="toggle-row" style="flex-direction:column;gap:6px;margin-bottom:8px">
+      <div class="toggle-btn active" id="piec_drewno" onclick="setPiec('drewno')">
+        Piec na drewno<br><span style="font-size:10px;opacity:0.7">stal nierdzewna 316L • bez dopłaty</span>
+      </div>
+      <div class="toggle-btn" id="piec_elec3" onclick="setPiec('elec3')">
+        Podgrzewacz elektryczny Gecko 2kW<br><span style="font-size:10px;opacity:0.7">jednofazowy • ze sterowaniem • bez dopłaty</span>
+      </div>
+      <div class="toggle-btn" id="piec_elec6" onclick="setPiec('elec6')">
+        Podgrzewacz elektryczny Gecko 6kW<br><span style="font-size:10px;opacity:0.7">trójfazowy • ze sterowaniem • +2 500 zł</span>
+      </div>
+    </div>
+
+  <!-- ELEWACJA -->
+  <div class="section">
+    <h3>Elewacja</h3>
+    <div id="wood_selected" style="display:flex;align-items:center;gap:8px;padding:6px;background:#1a1a1a;border-radius:4px;cursor:pointer;margin-bottom:4px" onclick="toggleWoodPanel()">
+      <img id="wood_sel_img" src="" style="width:50px;height:35px;object-fit:cover;border-radius:3px;flex-shrink:0">
+      <div style="flex:1">
+        <div id="wood_sel_name" style="color:#fff;font-size:13px"></div>
+        <div id="wood_sel_price" style="color:#c8a96e;font-size:11px"></div>
+      </div>
+      <span id="wood_arrow" style="color:#c8a96e">▼</span>
+    </div>
+    <div id="wood_panel" style="display:none;max-height:400px;overflow-y:auto">
+      <div id="wood_grid"></div>
+    </div>
+  </div>
+
+  <!-- NIECKA -->
+  <div class="section">
+    <h3>Niecka</h3>
+    <p style="font-size:11px;color:#a0a0a0;margin:-4px 0 10px;line-height:1.5">Niecka z litego akrylu sanitarnego — formowana z jednego kawałka, bez spoin i laminatu.</p>
+    <div id="niecka_selected" style="display:flex;align-items:center;gap:8px;padding:6px;background:#1a1a1a;border-radius:4px;cursor:pointer;margin-bottom:4px" onclick="toggleNieckaPanel()">
+      <img id="niecka_sel_img" src="https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR3.jpg" style="width:60px;height:60px;object-fit:cover;border-radius:50%;flex-shrink:0">
+      <div style="flex:1">
+        <div id="niecka_sel_name" style="color:#fff;font-size:13px">NR3 — Kremowy</div>
+        <div id="niecka_sel_price" style="color:#c8a96e;font-size:11px">bez dopłaty</div>
+      </div>
+      <span id="niecka_arrow" style="color:#c8a96e">▼</span>
+    </div>
+    <div id="niecka_panel" style="display:none;max-height:400px;overflow-y:auto">
+      <div id="niecka_grid"></div>
+    </div>
+  </div>
+
+  <!-- MASAZ -->
+  <div class="section">
+    <h3>Masaż</h3>
+    <div class="toggle-row" style="flex-direction:column;gap:6px">
+      <div class="toggle-btn active" id="masaz_8" onclick="setMasaz('8')">
+        Masaż wodny 8 dysz<br><span style="font-size:10px;opacity:0.7">bez dopłaty</span>
+      </div>
+      <div class="toggle-btn" id="masaz_22" onclick="setMasaz('22')">
+        Masaż wodny 22 dysze<br><span style="font-size:10px;opacity:0.7">+2 000 zł</span>
+      </div>
+      <div class="toggle-btn" id="masaz_pow" onclick="setMasaz('pow')">
+        Masaż powietrzny 12 dysz<br><span style="font-size:10px;opacity:0.7">+1 500 zł</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTRACJA -->
+  <div class="section" id="filtracja_section">
+    <h3>Filtracja wody</h3>
+    <div class="toggle-row" style="flex-direction:column;gap:6px">
+      <div class="toggle-btn" id="filtr_brak" onclick="setFiltr('brak')">
+        Brak filtracji<br><span style="font-size:10px;opacity:0.7">bez dopłaty</span>
+      </div>
+      <div class="toggle-btn active" id="filtr_std" onclick="setFiltr('std')">
+        Zintegrowany filtr<br><span style="font-size:10px;opacity:0.7" id="filtracja_price">+1 200 zł</span>
+      </div>
+      <div class="toggle-btn" id="filtr_uv" onclick="setFiltr('uv')">
+        Filtr z lampą UV<br><span style="font-size:10px;opacity:0.7">+2 200 zł</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LED -->
+  <div class="section">
+    <h3>Podświetlenie LED</h3>
+    <div class="ctrl">
+      <label>7 kolorów RGB — sterowanie z panelu wanny</label>
+      <span class="price">+2 250 zł</span>
+      <input type="checkbox" id="show_led" onchange="toggleLED(this.checked)">
+    </div>
+    <div id="led_opts" style="display:none; margin-top:8px">
+      <div style="font-size:11px;color:#888;margin-bottom:8px;line-height:1.5">
+        Kolory zmieniają się automatycznie.<br>Kliknij wybrany kolor aby zatrzymać.<br>
+        <span style="color:#c8a96e">W cenie zawarte są wszystkie kolory — sterujesz nimi z panelu sterowania wanny.</span>
+      </div>
+      <div class="led-swatch-row">
+        <div class="led-swatch" style="background:#4fc3f7" data-color="#4fc3f7" title="Niebieski"></div>
+        <div class="led-swatch" style="background:#ffffff" data-color="#ffffff" title="Biały"></div>
+        <div class="led-swatch" style="background:#ff0000" data-color="#ff0000" title="Czerwony"></div>
+        <div class="led-swatch" style="background:#00ff00" data-color="#00ff00" title="Zielony"></div>
+        <div class="led-swatch" style="background:#0000ff" data-color="#0000ff" title="Niebieski ciemny"></div>
+        <div class="led-swatch" style="background:#ffff00" data-color="#ffff00" title="Żółty"></div>
+        <div class="led-swatch" style="background:#ff00ff" data-color="#ff00ff" title="Różowy"></div>
+      </div>
+      <div id="led_fixed_info" style="display:none;font-size:10px;color:#c8a96e;margin-top:6px;text-align:center">
+        ✓ Wybrany kolor stały — odznacz LED i zaznacz ponownie aby wznowić rotację
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHODY -->
+  <div class="section">
+    <h3>Schody</h3>
+    <div class="ctrl"><label>Schody boczne premium</label><span class="price">+1 000 zł</span><input type="checkbox" id="show_sb" onchange="toggleSchodkiBoczne(this.checked)"></div>
+
+    <div class="ctrl" style="margin-top:8px"><label>Schody proste premium</label><span class="price">+500 zł</span><input type="checkbox" id="show_sp" onchange="toggleSchodkiProste(this.checked)"></div>
+    <div class="ctrl" style="margin-top:8px"><label>Schody podstawowe</label><span style="font-size:11px;color:#666">bez dopłaty</span><input type="checkbox" id="show_spodst" onchange="toggleSchodkiPodstawowe(this.checked)"></div>
+
+
+  </div>
+
+  </div>
+
+  <!-- POKRYWKA -->
+  <div class="section">
+    <div class="ctrl">
+      <label>Ocieplana pokrywa z eko skóry</label>
+      <span class="price">+1 000 zł</span><input type="checkbox" id="show_pokrywka" onchange="togglePokrywka(this.checked)">
+    </div>
+    <div id="pokrywka_opts" style="display:none; margin-top:8px">
+      <div class="ctrl"><label style="font-size:11px;color:#666">Podnieś pokrywę</label><span id="pok_lift_val" style="font-size:11px;color:#c8a96e">0.00</span></div>
+      <input type="range" id="pok_lift" min="0" max="0.72" step="0.01" value="0" style="width:100%;accent-color:#c8a96e" oninput="adjustPokrywka()">
+    </div>
+  </div>
+
+  <!-- AKCESORIA -->
+  <div class="section">
+    <h3>Akcesoria</h3>
+    <div class="ctrl"><label>4 zagłówki</label><span class="price">+400 zł</span><input type="checkbox" id="acc_zaglowki" onchange="toggleAcc('zaglowki',400,this.checked)"></div>
+    <div class="ctrl"><label>Głośniki Bluetooth</label><span class="price">+600 zł</span><input type="checkbox" id="acc_glosniki" onchange="toggleAcc('glosniki',600,this.checked)"></div>
+    <div class="ctrl"><label>Drewniany uchwyt na napoje</label><span class="price">+200 zł</span><input type="checkbox" id="acc_uchwyt" onchange="toggleAcc('uchwyt',200,this.checked)"></div>
+    <div class="ctrl"><label>Mieszadło do wody (wiosło)</label><span class="price">+100 zł</span><input type="checkbox" id="acc_wioslo" onchange="toggleAcc('wioslo',100,this.checked)"></div>
+    <div class="ctrl"><label>Dodatkowy wkład filtra</label><span class="price">+100 zł</span><input type="checkbox" id="acc_filtr" onchange="toggleAcc('filtr',100,this.checked)"></div>
+  </div>
+
+  <!-- WIDOK -->
+  <div class="section">
+    <h3>Widok</h3>
+    <div class="ctrl">
+      <label>Auto-obrót</label>
+      <input type="checkbox" id="autorot" onchange="controls.autoRotate=this.checked">
+    </div>
+    <div class="ctrl" style="margin-top:8px">
+      <label id="daynight_label">Tryb dzienny</label>
+      <div onclick="toggleDayNight()" style="cursor:pointer;width:44px;height:24px;background:#333;border-radius:12px;position:relative;transition:background .3s" id="daynight_toggle">
+        <div id="daynight_knob" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:#c8a96e;border-radius:50%;transition:left .3s"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KALKULATOR -->
+  <div id="kalkulator">
+      <h3>🧮 Kalkulator ceny</h3>
+      <div class="kal-row active"><span>Balia podstawowa</span><span>10 000 zł</span></div>
+      <div class="kal-row" id="kal_elewacja"><span>Elewacja</span><span id="kal_elewacja_val">—</span></div>
+      <div class="kal-row" id="kal_niecka"><span>Niecka</span><span id="kal_niecka_val">—</span></div>
+      <div class="kal-row" id="kal_masaz_w"><span>Masaż wodny</span><span id="kal_masaz_w_val">—</span></div>
+      <div class="kal-row" id="kal_masaz_p"><span>Masaż powietrzny</span><span id="kal_masaz_p_val">—</span></div>
+      <div class="kal-row" id="kal_ogrzewanie"><span>Podgrzewanie wody</span><span id="kal_ogrzewanie_val">bez dopłaty</span></div>
+      <div class="kal-row" id="kal_filtracja"><span id="kal_filtracja_name">Zintegrowany filtr</span><span id="kal_filtracja_val">—</span></div>
+      <div class="kal-row" id="kal_schody"><span>Schody</span><span id="kal_schody_val">—</span></div>
+      <div class="kal-row" id="kal_pokrywa"><span>Ocieplana pokrywa z eko skóry</span><span id="kal_pokrywa_val">—</span></div>
+      <div class="kal-row" id="kal_led"><span>Podświetlenie LED 7 kolorów</span><span id="kal_led_val">—</span></div>
+      <div class="kal-row" id="kal_acc_zaglowki"><span>4 zagłówki</span><span id="kal_acc_zaglowki_val">—</span></div>
+      <div class="kal-row" id="kal_acc_glosniki"><span>Głośniki Bluetooth</span><span id="kal_acc_glosniki_val">—</span></div>
+      <div class="kal-row" id="kal_acc_uchwyt"><span>Uchwyt na napoje</span><span id="kal_acc_uchwyt_val">—</span></div>
+      <div class="kal-row" id="kal_acc_wioslo"><span>Mieszadło (wiosło)</span><span id="kal_acc_wioslo_val">—</span></div>
+      <div class="kal-row" id="kal_acc_filtr"><span>Wkład filtra</span><span id="kal_acc_filtr_val">—</span></div>
+      <hr class="kal-divider">
+      <div class="kal-total"><span>Razem</span><span id="kal_suma">10 000 zł</span></div>
+    </div>
+
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+// ── KOLORY DREWNA ─────────────────────────────────────────────────
+const WOODS = [
+  { group:'Drewno świerkowe', name:'Świerkowe 1',      color:'#cbac77', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%201.jpg' },
+  { group:'Drewno świerkowe', name:'Świerkowe 2',      color:'#ad4d3d', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%202.jpg' },
+  { group:'Drewno świerkowe', name:'Świerkowe 3',      color:'#c4af9d', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%203.jpg' },
+  { group:'Drewno świerkowe', name:'Świerkowe 4',      color:'#a97959', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%204.jpg' },
+  { group:'Drewno świerkowe', name:'Świerkowe 5',      color:'#686158', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%205.jpg' },
+  { group:'Drewno świerkowe', name:'Świerkowe 6',      color:'#222834', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%206.jpg' },
+  { group:'Drewno świerkowe', name:'Świerkowe 7',      color:'#5f6a75', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%207.jpg' },
+  { group:'Drewno świerkowe', name:'Niemalowane',      color:'#d4d0c2', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/swierkowe%20niemalowane.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 1',  color:'#ad8d68', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%201.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 2',  color:'#a95f4f', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%202.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 3',  color:'#9c653b', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%203.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 4',  color:'#76493d', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%204.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 5',  color:'#7c6659', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%205.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 6',  color:'#141314', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%206.jpg' },
+  { group:'Thermo drewno',    name:'Thermo drewno 7',  color:'#868d9c', price:1000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Thermo%20drewno%207.jpg' },
+  { group:'Modrzew',          name:'Modrzew 1',        color:'#cbac77', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%201.jpg' },
+  { group:'Modrzew',          name:'Modrzew 2',        color:'#ad4d3d', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%202.jpg' },
+  { group:'Modrzew',          name:'Modrzew 3',        color:'#c4af9d', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%203.jpg' },
+  { group:'Modrzew',          name:'Modrzew 4',        color:'#a97959', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%204.jpg' },
+  { group:'Modrzew',          name:'Modrzew 5',        color:'#686158', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%205.jpg' },
+  { group:'Modrzew',          name:'Modrzew 6',        color:'#222834', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%206.jpg' },
+  { group:'Modrzew',          name:'Modrzew 7',        color:'#5f6a75', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Modrzew%207.jpg' },
+  { group:'Kompozyt',         name:'Kompozyt brązowy', color:'#6f605b', price:2000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Kompozyt%20br%C4%85zowy.jpg' },
+  { group:'Kompozyt',         name:'Kompozyt czarny',  color:'#443e44', price:2000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/Kompozyt%20czarny.jpg' },
+];
+
+// Buduj grid drewna
+const grid = document.getElementById('wood_grid');
+
+// ── MARBLE ────────────────────────────────────────────────────────
+const MARBLES = {
+  NR5:  { bg:'#2a1e10', veins:['#c8a060','#a07840','#e0c080','#806030'], angle:42 },
+  NR6:  { bg:'#0e0e14', veins:['#4a5878','#6878a0','#303848','#8090b8'], angle:55 },
+  NR10: { bg:'#c8c4be', veins:['#505050','#404040','#686868','#303030'], angle:30 },
+  NR12: { bg:'#d8d4d0', veins:['#a0a0a0','#888888','#b8b4b0','#787878'], angle:22 },
+  NR13: { bg:'#1e2028', veins:['#505868','#686878','#404050','#787890'], angle:48 },
+  NR16: { bg:'#3a2e20', veins:['#907060','#705040','#b09080','#504030'], angle:38 },
+  NR18: { bg:'#f0eeec', veins:['#b0acaa','#c8c4c2','#989490','#d8d4d2'], angle:18 },
+};
+
+// Cache tekstur - generujemy raz, potem reuzywamy
+const marbleCache = {};
+
+function generateMarbleTexture(preset) {
+  if (marbleCache[preset]) return marbleCache[preset];
+
+  const p = MARBLES[preset];
+  const SIZE = 512; // mniejszy rozmiar = szybsze generowanie
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = SIZE;
+  const ctx = cv.getContext('2d');
+
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0,0,SIZE,SIZE);
+  ctx.save();
+  ctx.translate(SIZE/2,SIZE/2);
+  ctx.rotate(p.angle*Math.PI/180);
+  ctx.translate(-SIZE/2,-SIZE/2);
+
+  const seed = preset.charCodeAt(0)*13 + preset.length*7;
+  function rnd(s){ return Math.sin(s*127.1+seed)*0.5+0.5; }
+
+  // Smugi tla
+  for(let i=0;i<5;i++){
+    const x=rnd(i*5)*SIZE, w=50+rnd(i*5+1)*150;
+    const g=ctx.createLinearGradient(x-w,0,x+w,0);
+    const c=p.veins[i%p.veins.length];
+    g.addColorStop(0,c+'00');
+    g.addColorStop(0.5,c+'40');
+    g.addColorStop(1,c+'00');
+    ctx.fillStyle=g;
+    ctx.fillRect(0,-SIZE*0.5,SIZE*2,SIZE*3);
+  }
+
+  // Glowne zylki (bezier)
+  for(let i=0;i<25;i++){
+    const x0=rnd(i*7)*SIZE;
+    const x1=x0+(rnd(i*7+1)-0.5)*250;
+    const x2=x1+(rnd(i*7+2)-0.5)*180;
+    const alpha=0.3+rnd(i*7+3)*0.5;
+    ctx.beginPath();
+    ctx.moveTo(x0,-20);
+    ctx.bezierCurveTo(x1,SIZE*0.35,x2,SIZE*0.7,x0+(rnd(i*7+4)-0.5)*200,SIZE+20);
+    ctx.strokeStyle=p.veins[i%p.veins.length]+Math.round(alpha*255).toString(16).padStart(2,'0');
+    ctx.lineWidth=0.5+rnd(i*7+5)*2.0;
+    ctx.stroke();
+  }
+
+  // Mikro-zylki
+  for(let i=0;i<40;i++){
+    const x0=rnd(i*11+50)*SIZE, x1=x0+(rnd(i*11+51)-0.5)*100;
+    const alpha=0.1+rnd(i*11+52)*0.25;
+    ctx.beginPath();
+    ctx.moveTo(x0,-10); ctx.lineTo(x1,SIZE+10);
+    ctx.strokeStyle=p.veins[i%4]+Math.round(alpha*255).toString(16).padStart(2,'0');
+    ctx.lineWidth=0.2+rnd(i*11+53)*0.6;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+  marbleCache[preset] = tex;
+  return tex;
+}
+
+// ── KALKULATOR ────────────────────────────────────────────────────
+const CENY = { base:10000, niecka:2250, led:2250, schodki:2250, filtracja:2250 };
+const state = { wood_price:0, niecka_price:0, schodki_typ:'none', pokrywa:false, acc_prices:{}, filtr_typ:'std', masaz_wodny:'8', masaz_wodny_price:0, masaz_pow:false, masaz_pow_price:0, piec_typ:'drewno', led:false, schodki:false, filtracja:true };
+
+function updateKalkulator() {
+  let suma = 10000;
+
+  // Elewacja
+  const wp = state.wood_price || 0;
+  suma += wp;
+  const elRow = document.getElementById('kal_elewacja');
+  const elVal = document.getElementById('kal_elewacja_val');
+  if(elRow && elVal) {
+    elRow.classList.toggle('active', wp > 0);
+    elVal.textContent = wp > 0 ? '+' + wp.toLocaleString('pl-PL') + ' zł' : 'bez dopłaty';
+  }
+
+  // Niecka
+  const np = state.niecka_price || 0;
+  suma += np;
+  const nRow = document.getElementById('kal_niecka');
+  const nVal = document.getElementById('kal_niecka_val');
+  if(nRow && nVal) {
+    nRow.classList.toggle('active', np > 0);
+    nVal.textContent = np > 0 ? '+' + np.toLocaleString('pl-PL') + ' zł' : 'bez dopłaty';
+  }
+
+  // Masaz wodny
+  const mw = state.masaz_wodny_price || 0;
+  suma += mw;
+  const mwRow = document.getElementById('kal_masaz_w');
+  const mwVal = document.getElementById('kal_masaz_w_val');
+  if(mwRow && mwVal) {
+    mwRow.classList.toggle('active', true);
+    mwVal.textContent = mw > 0 ? '+' + mw.toLocaleString('pl-PL') + ' zł' : 'bez dopłaty (8 dysz)';
+  }
+  // Masaz powietrzny
+  const mp = state.masaz_pow_price || 0;
+  suma += mp;
+  const mpRow = document.getElementById('kal_masaz_p');
+  const mpVal = document.getElementById('kal_masaz_p_val');
+  if(mpRow && mpVal) {
+    mpRow.classList.toggle('active', state.masaz_pow);
+    mpVal.textContent = state.masaz_pow ? '+1 500 zł' : '—';
+  }
+
+  // Ogrzewanie
+  const elec6 = state.piec_typ === 'elec6' ? 2500 : 0;
+  suma += elec6;
+  const oRow = document.getElementById('kal_ogrzewanie');
+  const oVal = document.getElementById('kal_ogrzewanie_val');
+  if(oRow && oVal) {
+    oRow.classList.toggle('active', elec6 > 0);
+    oVal.textContent = elec6 > 0 ? '+2 500 zł' : 'bez dopłaty';
+  }
+
+  // Filtracja
+  let fPrice = 0;
+  const isElecF = (state.piec_typ === 'elec3' || state.piec_typ === 'elec6');
+  if(state.filtr_typ === 'std') fPrice = isElecF ? 0 : 1200;
+  else if(state.filtr_typ === 'uv') fPrice = 2200;
+  suma += fPrice;
+  const fRow = document.getElementById('kal_filtracja');
+  const fVal = document.getElementById('kal_filtracja_val');
+  const fName = document.getElementById('kal_filtracja_name');
+  if(fRow && fVal) {
+    fRow.classList.toggle('active', state.filtr_typ !== 'brak');
+    if(fName) {
+      if(state.filtr_typ === 'brak') fName.textContent = 'Filtracja';
+      else if(state.filtr_typ === 'std') fName.textContent = 'Zintegrowany filtr';
+      else fName.textContent = 'Filtr z lampą UV';
+    }
+    if(state.filtr_typ === 'brak') fVal.textContent = '—';
+    else if(fPrice === 0) fVal.textContent = 'gratis';
+    else fVal.textContent = '+' + fPrice.toLocaleString('pl-PL') + ' zł';
+  }
+
+  // Schody
+  const sPrice = state.schodki_typ==='boczne' ? 1000 : state.schodki_typ==='proste' ? 500 : 0;
+  suma += sPrice;
+  const sRow = document.getElementById('kal_schody');
+  const sVal = document.getElementById('kal_schody_val');
+  if(sRow && sVal) {
+    sRow.classList.toggle('active', state.schodki_typ !== 'none');
+    if(state.schodki_typ === 'none') sVal.textContent = '—';
+    else if(sPrice === 0) sVal.textContent = 'bez dopłaty';
+    else sVal.textContent = '+' + sPrice.toLocaleString('pl-PL') + ' zł';
+  }
+
+  // Pokrywa
+  const pokPrice = state.pokrywa ? 1000 : 0;
+  suma += pokPrice;
+  // Pokrywa
+  const pRow = document.getElementById('kal_pokrywa');
+  const pVal = document.getElementById('kal_pokrywa_val');
+  if(pRow && pVal) {
+    pRow.classList.toggle('active', state.pokrywa);
+    pVal.textContent = state.pokrywa ? '+1 000 zł' : '—';
+  }
+
+  // LED
+  const lPrice = state.led ? 2250 : 0;
+  suma += lPrice;
+  const lRow = document.getElementById('kal_led');
+  const lVal = document.getElementById('kal_led_val');
+  if(lRow && lVal) {
+    lRow.classList.toggle('active', state.led);
+    lVal.textContent = state.led ? '+2 250 zł' : '—';
+  }
+
+  // Akcesoria - kazde osobno
+  const accItems = {
+    zaglowki: {label:'zaglowki', price:400},
+    glosniki:  {label:'glosniki', price:600},
+    uchwyt:    {label:'uchwyt', price:200},
+    wioslo:    {label:'wioslo', price:100},
+    filtr:     {label:'filtr', price:100},
+  };
+  Object.entries(accItems).forEach(([key, item]) => {
+    const p = state.acc_prices[key] || 0;
+    suma += p;
+    const row = document.getElementById('kal_acc_'+key);
+    const val = document.getElementById('kal_acc_'+key+'_val');
+    if(row && val) {
+      row.classList.toggle('active', p > 0);
+      val.textContent = p > 0 ? '+' + p.toLocaleString('pl-PL') + ' zł' : '—';
+    }
+  });
+
+  document.getElementById('kal_suma').textContent = suma.toLocaleString('pl-PL') + ' zł';
+
+  // Ukryj wiersze z myslnikiem
+  document.querySelectorAll('#kalkulator .kal-row').forEach(row => {
+    const val = row.querySelector('[id$="_val"]');
+    if(val && val.textContent === '—') {
+      row.style.display = 'none';
+    } else {
+      row.style.display = '';
+    }
+  });
+}
+// Inicjalizacja - filtracja domyslnie wlaczona
+updateKalkulator();
+
+// ── SCENE ─────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.5;
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#ffffff');
+const camera = new THREE.PerspectiveCamera(45,1,0.01,100);
+camera.position.set(1.8,1.2,1.8);
+
+const controls = new OrbitControls(camera,canvas);
+controls.enableDamping=true; controls.dampingFactor=0.05;
+controls.minDistance=0.5; controls.maxDistance=5;
+controls.maxPolarAngle=Math.PI/1.8;
+controls.autoRotate=false; controls.autoRotateSpeed=0.8;
+
+scene.add(new THREE.AmbientLight(0xffffff,1.0));
+const sun=new THREE.DirectionalLight(0xffffff,2.8);
+sun.position.set(3,1.2,2); sun.castShadow=true; scene.add(sun);
+const fill=new THREE.DirectionalLight(0xf0f4ff,1.0);
+fill.position.set(-2,2,-1); scene.add(fill);
+const rim=new THREE.DirectionalLight(0xffffff,0.6);
+rim.position.set(0,-1,-2); scene.add(rim);
+
+
+
+// ── STATE ─────────────────────────────────────────────────────────
+const matMap={};
+const nieckaMeshes=[];
+let marbleStdMat=null, nieckaMode='solid', currentMarble='grey';
+let piecNode=null, klapkaNode=null, filtrNode=null, schodkiBoczneNode=null, schodkiProsteNode=null, schodkiPodstawoweNode=null, filtrPlug=null, pokrywkaNode=null;
+let ledLight=null, ledGlow=null;
+
+function createLED(box) {
+  const cx=(box.min.x+box.max.x)/2, cz=(box.min.z+box.max.z)/2;
+  const yTop=box.max.y, r=(box.max.x-box.min.x)*0.52;
+  const group=new THREE.Group();
+  const ml=new THREE.PointLight(0x4fc3f7,4.0,r*3.5);
+  ml.position.set(cx,yTop+0.05,cz);
+  const il=new THREE.PointLight(0x4fc3f7,2.5,r*2.0);
+  il.position.set(cx,yTop-0.1,cz);
+  group.add(ml); group.add(il);
+  group.userData.mainLight=ml; group.userData.innerLight=il;
+  return {light:ml, glow:group};
+}
+
+// ── LOAD GLB ──────────────────────────────────────────────────────
+// DRACOLoader dla skompresowanych meshów
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+
+gltfLoader.load(
+  'https://raw.githubusercontent.com/jacuzzi-coder/model3d/main/balia_z_piecem_3_compressed.glb',
+  (gltf) => {
+    const model = gltf.scene;
+
+    // Ukryj schodki i piec przed bbox
+    model.traverse(obj => {
+      if(obj.name==='schodki_boczne'||obj.name==='schodki_proste'||obj.name==='piec'||obj.name==='klapka_elec'||obj.name==='schodki_podstawowe') obj.visible=false;
+    });
+
+    const box=new THREE.Box3().setFromObject(model);
+    const sz=box.getSize(new THREE.Vector3());
+    const sc=1.6/Math.max(sz.x,sz.y,sz.z);
+    model.scale.setScalar(sc);
+    const ctr=box.getCenter(new THREE.Vector3());
+    model.position.set(-ctr.x*sc,-box.min.y*sc,-ctr.z*sc);
+
+    // Przywroc visible przed traverse materialow - Three.js pomija ukryte nody
+    model.traverse(obj => { obj.visible=true; });
+
+    model.traverse(obj=>{
+      if(!obj.isMesh) return;
+      obj.castShadow=true; obj.receiveShadow=true;
+      const name=obj.material?.name||'';
+      if(!matMap[name]){obj.material=obj.material.clone();matMap[name]=obj.material;}
+      else obj.material=matMap[name];
+      if(name==='mat_niecka') nieckaMeshes.push(obj);
+      if(name==='mat_piec'||name==='mat_obejma'){
+        obj.material.color.set('#c0c0c8');
+        obj.material.roughness=0.3; obj.material.metalness=0.8;
+      }
+    });
+
+    // Znajdz nody po nazwie
+    schodkiBoczneNode = model.getObjectByName('schodki_boczne');
+    schodkiProsteNode = model.getObjectByName('schodki_proste');
+    piecNode          = model.getObjectByName('piec');
+    filtrNode         = model.getObjectByName('filtr');
+    klapkaNode            = model.getObjectByName('klapka_elec');
+    schodkiPodstawoweNode = model.getObjectByName('schodki_podstawowe');
+    console.log('Nody:', {
+      schodkiBoczne: schodkiBoczneNode?.name || 'NIE ZNALEZIONO',
+      schodkiProste: schodkiProsteNode?.name || 'NIE ZNALEZIONO',
+      piec: piecNode?.name || 'NIE ZNALEZIONO',
+      filtr: filtrNode?.name || 'NIE ZNALEZIONO'
+    });
+    console.log('matMap keys:', Object.keys(matMap));
+
+    if(schodkiBoczneNode){
+      schodkiBoczneNode.visible=false;
+      schodkiBoczneNode.position.x += 0.09 + (-0.07);
+      schodkiBoczneNode.position.y += -0.04;
+      schodkiBoczneNode.userData.localBase={x:schodkiBoczneNode.position.x,y:schodkiBoczneNode.position.y};
+      schodkiBoczneNode.userData.localBaseScale=schodkiBoczneNode.scale.x;
+    }
+    if(schodkiProsteNode){
+      schodkiProsteNode.visible=false;
+      schodkiProsteNode.position.x += 0.09 + (-0.11);
+      schodkiProsteNode.position.y += -0.04;
+      schodkiProsteNode.scale.setScalar(schodkiProsteNode.scale.x * 0.69);
+      schodkiProsteNode.rotation.y = (165 + (-177)) * Math.PI / 180;
+    }
+    if(schodkiPodstawoweNode){
+      schodkiPodstawoweNode.visible=false;
+      schodkiPodstawoweNode.position.x += 0.09 + (-0.18);
+      schodkiPodstawoweNode.position.y += -0.04;
+      schodkiPodstawoweNode.scale.setScalar(schodkiPodstawoweNode.scale.x * 0.68);
+      schodkiPodstawoweNode.rotation.y = (180 + 90) * Math.PI / 180;
+    }
+    if(piecNode){
+      piecNode.visible=false;
+      piecNode.position.y += -0.04;
+      piecNode.scale.setScalar(piecNode.scale.x * 1.05);
+      piecNode.userData.localBase={x:piecNode.position.x,y:piecNode.position.y};
+      piecNode.userData.localBaseScale=piecNode.scale.x;
+    }
+    if(klapkaNode){
+      klapkaNode.visible=false;
+      klapkaNode.position.x += -0.12;
+      klapkaNode.position.y += 0.07;
+      klapkaNode.position.z += 0.02;
+      klapkaNode.scale.setScalar(klapkaNode.scale.x * 0.92);
+      klapkaNode.rotation.y = 32 * Math.PI / 180;
+    }
+    if(filtrNode) filtrNode.visible=true;
+
+    // Ustaw domyslny kolor drewna (Thermodrewno 1)
+    if(matMap['mat_elewacja']) matMap['mat_elewacja'].color.set('#a97959');
+    if(matMap['mat_schodki']) matMap['mat_schodki'].color.set('#a97959');
+    if(matMap['mat_schodki_proste']) matMap['mat_schodki_proste'].color.set('#a97959');
+    if(matMap['mat_klapka']) matMap['mat_klapka'].color.set('#a97959');
+    if(matMap['mat_schodki_podstawowe']) matMap['mat_schodki_podstawowe'].color.set('#a97959');
+
+    scene.add(model);
+    window._mainModel = model;
+    // Domyslnie: piec na drewno widoczny
+    if(piecNode) piecNode.visible = true;
+
+    // Stworz dysk zakrywajacy dziure po filtrze
+    if(filtrNode) {
+      const fb = new THREE.Box3().setFromObject(filtrNode);
+      const fc = fb.getCenter(new THREE.Vector3());
+      const fr = (fb.max.x - fb.min.x) * 0.6;
+      const plugMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#e0e0e5'),
+        roughness: 0.15, metalness: 0.05
+      });
+      filtrPlug = new THREE.Mesh(new THREE.CircleGeometry(fr, 32), plugMat);
+      filtrPlug.rotation.x = -Math.PI/2;
+      filtrPlug.position.set(fc.x, fb.min.y + 0.001, fc.z);
+      filtrPlug.visible = false;
+      scene.add(filtrPlug);
+    }
+
+    const worldBox=new THREE.Box3().setFromObject(model);
+    const led=createLED(worldBox);
+    ledLight=led.light; ledGlow=led.glow;
+    ledLight.visible=false; ledGlow.visible=false;
+    scene.add(ledGlow);
+
+    document.getElementById('loading').style.display='none';
+  },
+  undefined,
+  err=>{document.getElementById('loading').textContent='Błąd: '+err.message;}
+);
+
+// ── NIECKA ──────────────────────────────────────────────────────
+const NIECKA_OPTIONS = [
+  { id:'NR3',  name:'Kremowy NR3',     type:'solid',  color:'#d5cfc3', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR3.jpg' },
+  { id:'NR4',  name:'Szary NR4',       type:'solid',  color:'#737c83', price:0,    img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR4.jpg' },
+  { id:'NR17', name:'Czarny matowy NR17',     type:'solid',  color:'#3a3a3a', roughness:1.0, price:2000, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR17.jpg' },
+  { id:'NR5',  name:'Marmur NR5', type:'marble', color:'#7e6652', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR5.jpg', tex:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/tekstura%20nr5.png', tint:'#9e8570' },
+  { id:'NR6',  name:'Marmur NR6', type:'marble', color:'#3f535c', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR6.jpg', tex:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/tekstura%20nr6.png', tint:'#6a6a72' },
+  { id:'NR10', name:'Marmur NR10',type:'marble', color:'#64707c', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR10.jpg', tex:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/tekstura%20nr10.png', tint:'#787878' },
+  { id:'NR12', name:'Marmur NR12',type:'marble', color:'#d1d3ce', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR12.jpg', tex:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/tekstura%20nr12.png', tint:'#a8aaa5' },
+  { id:'NR13', name:'Marmur NR13',type:'marble', color:'#2d3c4d', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR13.jpg', tex:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/tekstura%20nr13.png', tint:'#888888' },
+  { id:'NR16', name:'Marmur NR16', type:'marble', color:'#8b8270', price:1500, img:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/NR16.jpg', tex:'https://cdn.jsdelivr.net/gh/jacuzzi-coder/model3d@main/tekstura%20nr16.png', tint:'#7f7c7b' },
+];
+
+window.toggleNieckaPanel = function() {
+  const panel = document.getElementById('niecka_panel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  document.getElementById('niecka_arrow').textContent = open ? '▲' : '▼';
+};
+
+function applyNiecka(opt, el) {
+  document.querySelectorAll('.niecka-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('niecka_sel_img').src = opt.img;
+  document.getElementById('niecka_sel_name').textContent = opt.name;
+  document.getElementById('niecka_sel_price').textContent = opt.price===0 ? 'bez dopłaty' : '+'+opt.price.toLocaleString('pl-PL')+' zł';
+
+  if(opt.type === 'marble' && opt.tex) {
+    const texLoader = new THREE.TextureLoader();
+    texLoader.load(opt.tex, tex => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, 1);
+      nieckaMeshes.forEach(m => {
+        m.material.map = tex;
+        m.material.color.set(opt.tint || '#ffffff');
+        m.material.needsUpdate = true;
+      });
+    });
+  } else if(opt.type === 'marble') {
+    const canvas = drawMarble(opt.id);
+    const tex = new THREE.CanvasTexture(canvas);
+    nieckaMeshes.forEach(m => {
+      m.material.map = tex;
+      m.material.color.set('#ffffff');
+      m.material.needsUpdate = true;
+    });
+  } else {
+    nieckaMeshes.forEach(m => {
+      m.material.map = null;
+      m.material.color.set(opt.color);
+      m.material.roughness = opt.roughness !== undefined ? opt.roughness : 0.15;
+      m.material.metalness = 0.0;
+      m.material.needsUpdate = true;
+    });
+  }
+
+  state.niecka_price = opt.price;
+  updateKalkulator();
+  document.getElementById('niecka_panel').style.display='none';
+  document.getElementById('niecka_arrow').textContent='▼';
+}
+
+{
+  let curGroup = '';
+  const nieckaGrid = document.getElementById('niecka_grid');
+  NIECKA_OPTIONS.forEach((opt,i) => {
+    const group = opt.type === 'solid' ? 'Jednolita' : 'Marmur';
+    if(group !== curGroup) {
+      curGroup = group;
+      const lbl = document.createElement('div');
+      lbl.className = 'wood-group-label';
+      lbl.textContent = group;
+      nieckaGrid.appendChild(lbl);
+    }
+    const item = document.createElement('div');
+    item.className = 'niecka-item wood-item'+(i===0?' active':'');
+    item.innerHTML = `<img src="${opt.img}" loading="lazy" style="width:60px;height:60px;object-fit:cover;border-radius:50%;flex-shrink:0"><div><div class="wood-item-name">${opt.name}</div><div class="wood-item-price">${opt.price===0?'bez dopłaty':'+'+opt.price.toLocaleString('pl-PL')+' zł'}</div></div>`;
+    item.addEventListener('click', ()=>applyNiecka(opt,item));
+    nieckaGrid.appendChild(item);
+  });
+}
+
+// ── LED ───────────────────────────────────────────────────────────
+
+
+let ledColorInterval = null;
+let ledFixed = false;
+const LED_COLORS = ['#4fc3f7','#ffffff','#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff'];
+let ledColorIndex = 0;
+
+function setLedColor(col, idx) {
+  const c = new THREE.Color(col);
+  if(ledGlow) {
+    const ml=ledGlow.userData.mainLight, il=ledGlow.userData.innerLight;
+    if(ml) ml.color.set(c); if(il) il.color.set(c);
+  }
+  document.querySelectorAll('.led-swatch').forEach((s,i) => s.classList.toggle('active', i===idx));
+}
+
+window.toggleLED = function(visible) {
+  document.getElementById('led_opts').style.display=visible?'':'none';
+  // LED widoczny tylko gdy pokrywka NIE jest zaznaczona
+  const pokZaznaczona = document.getElementById('show_pokrywka')?.checked;
+  if(ledGlow) ledGlow.visible = visible && !pokZaznaczona;
+  state.led=visible; updateKalkulator();
+  if (visible) {
+    // Wznow rotacje
+    ledFixed = false;
+    ledColorIndex = 0;
+    document.getElementById('led_fixed_info').style.display='none';
+    if (ledColorInterval) clearInterval(ledColorInterval);
+    setLedColor(LED_COLORS[0], 0);
+    ledColorInterval = setInterval(() => {
+      if (ledFixed) return;
+      ledColorIndex = (ledColorIndex + 1) % LED_COLORS.length;
+      setLedColor(LED_COLORS[ledColorIndex], ledColorIndex);
+    }, 3000);
+  } else {
+    if (ledColorInterval) { clearInterval(ledColorInterval); ledColorInterval=null; }
+    ledFixed=false;
+  }
+};
+
+document.querySelectorAll('.led-swatch').forEach((sw,idx)=>{
+  sw.addEventListener('click',()=>{
+    // Zatrzymaj rotacje i ustaw wybrany kolor
+    ledFixed = true;
+    ledColorIndex = idx;
+    setLedColor(sw.dataset.color, idx);
+    document.getElementById('led_fixed_info').style.display='block';
+  });
+});
+
+// ── TOGGLE ────────────────────────────────────────────────────────
+window.toggleSchodkiBoczne = function(v) {
+  state.schodki_typ = v ? 'boczne' : 'none';
+  if(schodkiBoczneNode) schodkiBoczneNode.visible=v;
+  if(v&&schodkiProsteNode){
+    schodkiProsteNode.visible=false;
+    document.getElementById('show_sp').checked=false;
+  }
+  state.schodki=v; updateKalkulator();
+};
+window.toggleSchodkiProste = function(v) {
+  state.schodki_typ = v ? 'proste' : 'none';
+  if(schodkiProsteNode) schodkiProsteNode.visible=v;
+  if(v){
+    if(schodkiBoczneNode){schodkiBoczneNode.visible=false;document.getElementById('show_sb').checked=false;}
+    if(schodkiPodstawoweNode){schodkiPodstawoweNode.visible=false;document.getElementById('show_spodst').checked=false;document.getElementById('spodst_opts').style.display='none';}
+  }
+  state.schodki=v; updateKalkulator();
+};
+
+window.toggleSchodkiPodstawowe = function(v) {
+  state.schodki_typ = v ? 'basic' : 'none';
+  if(schodkiPodstawoweNode) schodkiPodstawoweNode.visible=v;
+  if(v){
+    if(schodkiBoczneNode){schodkiBoczneNode.visible=false;document.getElementById('show_sb').checked=false;}
+    if(schodkiProsteNode){schodkiProsteNode.visible=false;document.getElementById('show_sp').checked=false;}
+  }
+  state.schodki=v; updateKalkulator();
+};
+
+
+window.togglePiec = function(v) {
+  if(piecNode) piecNode.visible=v;
+  state.piec=v; updateKalkulator();
+};
+
+window.setPiec = function(typ) {
+  ['piec_drewno','piec_elec3','piec_elec6'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('piec_'+typ).classList.add('active');
+
+  if(piecNode) piecNode.visible = (typ==='drewno');
+  if(klapkaNode) klapkaNode.visible = (typ==='elec3' || typ==='elec6');
+
+  state.piec_typ = typ;
+
+  // Filtracja zalezna od pieca
+  const filtrSection = document.getElementById('filtracja_section');
+  const isElec = (typ === 'elec3' || typ === 'elec6');
+  if (isElec) {
+    // Elektryczny - filtr std gratis i zaznaczony
+    setFiltr('std');
+    document.getElementById('filtracja_price').textContent = 'gratis';
+    document.getElementById('filtr_brak').style.opacity = '0.4';
+    document.getElementById('filtr_brak').style.pointerEvents = 'none';
+    document.getElementById('filtr_std').style.opacity = '1';
+    document.getElementById('filtr_std').style.pointerEvents = ''; // dostepny - mozna wrocic z UV
+  } else {
+    // Drewno - wszystkie opcje dostepne
+    document.getElementById('filtracja_price').textContent = '+1 200 zł';
+    document.getElementById('filtr_brak').style.opacity = '1';
+    document.getElementById('filtr_brak').style.pointerEvents = '';
+    document.getElementById('filtr_std').style.pointerEvents = '';
+  }
+
+  updateKalkulator();
+};
+
+
+
+window.toggleFiltr = function(v) {
+  if(filtrNode) filtrNode.visible=v;
+  if(filtrPlug) filtrPlug.visible=!v;
+  state.filtracja=v; updateKalkulator();
+};
+
+// ── UI ────────────────────────────────────────────────────────────
+
+
+// ── POKRYWKA ─────────────────────────────────────────────────────
+window.togglePokrywka = function(visible) {
+  state.pokrywa = visible;
+  updateKalkulator();
+  document.getElementById('pokrywka_opts').style.display = visible ? '' : 'none';
+  if (!visible) {
+    if (pokrywkaNode) pokrywkaNode.visible = false;
+    // LED wraca jesli byl zaznaczony
+    const ledCheck = document.getElementById('show_led');
+    if (ledGlow && ledCheck && ledCheck.checked) ledGlow.visible = true;
+    return;
+  }
+  // Pokrywka widoczna = LED ukryty (jest pod pokrywą)
+  if (ledGlow) ledGlow.visible = false;
+  if (pokrywkaNode) {
+    pokrywkaNode.visible = true;
+    return;
+  }
+  const loader2 = new GLTFLoader();
+  const dracoLoader2 = new DRACOLoader();
+  dracoLoader2.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+  loader2.setDRACOLoader(dracoLoader2);
+  loader2.load(
+    'https://raw.githubusercontent.com/jacuzzi-coder/model3d/main/pokrywka_compressed.glb',
+    (gltf) => {
+      pokrywkaNode = gltf.scene;
+      // Dodaj jako dziecko modelu - pozycja w local space modelu
+      // te same jednostki co inne nody GLB
+      pokrywkaNode.position.set(0.05 + (-0.04), 0.19 + (-0.17), 0.01 + (-0.01));
+      pokrywkaNode.scale.setScalar(0.735 * 1.53);
+      pokrywkaNode.rotation.y = (174 + 170) * Math.PI / 180;
+      if(window._mainModel) window._mainModel.add(pokrywkaNode);
+      else scene.add(pokrywkaNode);
+    },
+    undefined,
+    err => console.warn('Pokrywka error:', err)
+  );
+};
+
+window.adjustPokrywka = function() {
+  if(!pokrywkaNode) return;
+  const lift = parseFloat(document.getElementById('pok_lift').value);
+  document.getElementById('pok_lift_val').textContent = lift.toFixed(2);
+  pokrywkaNode.position.y = 0.02 + lift;
+};
+
+// Accordion elewacji
+window.toggleWoodPanel = function() {
+  const panel = document.getElementById('wood_panel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  document.getElementById('wood_arrow').textContent = open ? '▲' : '▼';
+};
+
+function applyWood(w, el) {
+  document.querySelectorAll('.wood-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('wood_sel_img').src = w.img;
+  document.getElementById('wood_sel_name').textContent = w.name;
+  document.getElementById('wood_sel_price').textContent = w.price===0 ? 'bez dopłaty' : '+'+w.price.toLocaleString('pl-PL')+' zł';
+  ['mat_elewacja','mat_schodki','mat_schodki_proste','mat_klapka','mat_schodki_podstawowe'].forEach(m=>{
+    if(matMap[m]) matMap[m].color.set(w.color);
+  });
+  state.wood_price = w.price;
+  updateKalkulator();
+  document.getElementById('wood_panel').style.display='none';
+  document.getElementById('wood_arrow').textContent='▼';
+}
+
+{
+  let curGroup = '';
+  const woodGrid = document.getElementById('wood_grid');
+  WOODS.forEach((w,i) => {
+    if(w.group !== curGroup) {
+      curGroup = w.group;
+      const lbl = document.createElement('div');
+      lbl.className = 'wood-group-label';
+      lbl.textContent = w.group + (w.price>0 ? ' — +'+w.price.toLocaleString('pl-PL')+' zł' : ' — bez dopłaty');
+      woodGrid.appendChild(lbl);
+    }
+    const item = document.createElement('div');
+    item.className = 'wood-item'+(i===0?' active':'');
+    item.innerHTML = `<img src="${w.img}" loading="lazy"><div><div class="wood-item-name">${w.name}</div><div class="wood-item-price">${w.price===0?'bez dopłaty':'+'+w.price.toLocaleString('pl-PL')+' zł'}</div></div>`;
+    item.addEventListener('click', ()=>applyWood(w,item));
+    woodGrid.appendChild(item);
+  });
+  // Ustaw domyslny
+  const f=WOODS[0];
+  document.getElementById('wood_sel_img').src=f.img;
+  document.getElementById('wood_sel_name').textContent=f.name;
+  document.getElementById('wood_sel_price').textContent='bez dopłaty';
+  state.wood_price=0;
+}
+
+window.toggleAcc = function(name, price, checked) {
+  if(checked) state.acc_prices[name] = price;
+  else delete state.acc_prices[name];
+  updateKalkulator();
+};
+
+window.setMasaz = function(typ) {
+  if(typ === '8' || typ === '22') {
+    // Wodny - przelacz miedzy 8 a 22 (nie mozna obu)
+    const prev = state.masaz_wodny;
+    state.masaz_wodny = (prev === typ) ? null : typ;
+    state.masaz_wodny_price = state.masaz_wodny === '22' ? 2000 : 0;
+    document.getElementById('masaz_8').classList.toggle('active', state.masaz_wodny === '8');
+    document.getElementById('masaz_22').classList.toggle('active', state.masaz_wodny === '22');
+  } else if(typ === 'pow') {
+    // Powietrzny - toggle niezalezny
+    state.masaz_pow = !state.masaz_pow;
+    state.masaz_pow_price = state.masaz_pow ? 1500 : 0;
+    document.getElementById('masaz_pow').classList.toggle('active', state.masaz_pow);
+  }
+  updateKalkulator();
+};
+
+window.setFiltr = function(typ) {
+  ['filtr_brak','filtr_std','filtr_uv'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  const el = document.getElementById('filtr_'+typ);
+  if(el) el.classList.add('active');
+  state.filtr_typ = typ;
+  if(filtrNode) filtrNode.visible = (typ !== 'brak');
+  updateKalkulator();
+};
+
+let isDayMode = true;
+
+window.toggleDayNight = function() {
+  isDayMode = !isDayMode;
+  const toggle = document.getElementById('daynight_toggle');
+  const knob = document.getElementById('daynight_knob');
+  const label = document.getElementById('daynight_label');
+
+  if(isDayMode) {
+    // Dzien
+    scene.background = new THREE.Color('#ffffff');
+    sun.color.set('#ffffff');
+    sun.intensity = 2.8;
+    sun.position.set(3, 1.2, 2);
+    fill.color.set('#f0f4ff');
+    fill.intensity = 1.0;
+    renderer.toneMappingExposure = 1.5;
+    toggle.style.background = '#555';
+    knob.style.left = '3px';
+    label.textContent = 'Tryb dzienny';
+  } else {
+    // Noc
+    scene.background = new THREE.Color('#0a0f1a');
+    sun.color.set('#ff9040');
+    sun.intensity = 0.8;
+    sun.position.set(-2, 0.5, 1);
+    fill.color.set('#1a2040');
+    fill.intensity = 0.3;
+    renderer.toneMappingExposure = 0.8;
+    toggle.style.background = '#c8a96e';
+    knob.style.left = '23px';
+    label.textContent = 'Tryb nocny';
+  }
+};
+
+// ── LOOP ──
+// Domyslne ustawienia po zaladowaniu
+window.addEventListener('DOMContentLoaded', () => {
+  // Swierkkowe 4 jako domyslna elewacja
+  const swierk4 = WOODS.find(w => w.name === 'Świerkowe 4');
+  if(swierk4) {
+    const el = document.querySelector('.wood-item');
+    // Znajdz item dla Swierkkowych 4
+    document.querySelectorAll('.wood-item').forEach(item => {
+      if(item.querySelector('.wood-item-name')?.textContent === 'Świerkowe 4') {
+        applyWood(swierk4, item);
+      }
+    });
+  }
+  // NR3 Kremowy jako domyslna niecka - juz jest domyslna
+});
+
+function resize(){
+  const w=canvas.parentElement.clientWidth,h=canvas.parentElement.clientHeight;
+  camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false);
+}
+window.addEventListener('resize',resize); resize();
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene,camera); })();
+</script>
+</body>
+</html>
